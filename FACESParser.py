@@ -10,7 +10,6 @@ Written by Ella Wiljer, 2018
 Edited by Gabi Herman, 21 Nov 2018
 
 
-
 Note to self from Gabi: It would be good to have options for everything in a folder or just for individuals. (Erin says not to.)
 
 
@@ -25,6 +24,8 @@ from docopt import docopt
 import sys
 import codecs
 import pdb
+import pandas as pd
+import numpy as np
 
 # function to read the eprime file
 def read_eprime(eprimefile):
@@ -39,29 +40,28 @@ def find_all_data (eprime, tag):
     dataset = [(i,s) for i,s in enumerate(eprime) if tag in s]
     return dataset
 
-#take in a string from the eprime file to be parsed into an integer
-def findnum(ln):
-    index = ln.find(":")
-    txtnum = ln[index + 2:-2]
-    return int(txtnum)
+def findnum(ln): #TODO: make this use pattern matching rather than just looking for lines
+    try:
+        index = ln.find(":")
+        txtnum = ln[index + 2:-2]
+        return int(txtnum)
+    except:
+        return "n/a"
 
+#TODO: Separate this into more functions that make sense. :)
 def main():
 
     arguments       = docopt(__doc__)
     eprimefile      = arguments['<eprime_filename>']
 
-    eprimefile = '/scratch/gherman/OPT/FACES/gabi_behav/used_textfiles/OPT01_UP1_10006_01_02_EMOTION.txt'
+    #eprimefile = '/scratch/gherman/OPT/FACES/gabi_behav/used_textfiles/OPT01_UP1_10006_01_02_EMOTION.txt'  #the practise test case
+
+
     eprime = read_eprime(eprimefile)
 
-
-
-
-    print("It is running!")
-
-
     #create the tsv file from the eprime file
-    with open (eprimefile[0:-4] + ".tsv", "w")as tsv:
-        tsv.write("Trial\ttrial_type\tonset\taccuracy\treaction time\n")
+    #with open (eprimefile[0:-4] + ".tsv", "w")as tsv:
+    #    tsv.write("Trial\ttrial_type\tonset\taccuracy\treaction time\n")
 
     #tag the trials to obtain the data for each trial
     taglist = find_all_data(eprime,"Procedure: TrialsPROC\r\n") #that finds the trial numbers which actually have stimuli
@@ -75,56 +75,40 @@ def main():
     shapes_num = 0
     faces_avg = 0
     faces_num = 0
+    trial_start=np.empty([len(taglist)], dtype=int)
+    #trial_block=np.empty([len(taglist)])
+    trial_end=np.empty([len(taglist)], dtype=int)
     #loop to grab the data from each trial and output it in tsv format
     for i, ind_trial_proc in enumerate(taglist):
-
         #grab the data slice for each trial
         if (i < (len(taglist))-1):
-            trial_end = taglist[i+1][0]
+            trial_end[i] = taglist[i+1][0]
         elif (i == (len(taglist))-1):
-            trial_end = len(eprime)
+            trial_end[i] = len(eprime)
+        trial_start[i] = ind_trial_proc[0]
 
-        trial_start = ind_trial_proc[0]
-        trial_block = eprime[trial_start: trial_end]
+    trial_blocks=[eprime[trial_start[i]:trial_end[i]] for i in range(len(trial_end))]
 
-        with open (eprimefile[0:-4] + ".tsv", "a")as tsv:
-            #output trial number
-            tsv.write(str(i + 1) + "\t")
-            #check if data exists for the trial
-            onset_time = find_all_data(trial_block, 'StimSlide.OnsetTime:') #onset time of presentation of current trial in ms from script startup
-            if not onset_time:
-                tsv.write('n/a\tn/a\tn/a\r\n')
-                continue
-            #trial type and its average accuracy
-            shape_trial = find_all_data(trial_block, 'ShapeBlock')
-            face_trial = find_all_data(trial_block, 'FaceBlock')
-            if shape_trial:
-                tsv.write('Shapes\t')
-                shapes_num += 1 #should this really be hard coded?
-                acc = find_all_data(trial_block, 'StimSlide.ACC: ')
-                shapes_avg += findnum(acc[0][1])
+    onset_times=[((findnum(find_all_data(trial_blocks[i], 'StimSlide.OnsetTime:')[0][1])-basetime)/1000) for i in range(len(trial_end))]
+    trial_types =[('Shapes' if 'Shape' in str(trial_blocks[i]) else 'Faces') for i in range(len(trial_blocks))]
+    RTs=[(findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RT:')[0][1])/1000) for i in range(len(trial_end))]
 
-            if face_trial:
-                tsv.write('Faces\t')
-                faces_num += 1
-                acc = find_all_data(trial_block, 'StimSlide.ACC: ')
-                faces_avg += findnum(acc[0][1])
-            #output the trial's onset time(- the base onset time)
-            tsv.write(str(findnum(onset_time[0][1]) - basetime)+ "\t") #this is the time of the trial onset in relation to the acquisition of the first TR.
-            #output the trial's accuracy
-            ACC = find_all_data(trial_block, 'StimSlide.ACC: ')
-            tsv.write(str(findnum(ACC[0][1])) + "\t")
-            #output trial reaction time
-            RTnum = find_all_data(trial_block, 'StimSlide.RT:')
-            tsv.write(str(findnum(RTnum[0][1])) + "\r\n")
+    durations=[2 for i in range(len(trial_end))]
 
-    with open (eprimefile[0:-4] + ".tsv", "a")as tsv:
-        tsv.write("shapes Average\t" + str(float(shapes_avg) / float(shapes_num)) + "\n")
-        tsv.write(("faces Average\t" + str(float(faces_avg) / float(faces_num)) + "\n"))
+    accuracy=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.ACC:')[0][1]) for i in range(len(trial_end))]
 
+    correct_response=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'CorrectResponse:')[0][1]) for i in range(len(trial_end))]
+    participant_response = [findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RESP:')[0][1]) for i in range(len(trial_end))]
 
+    #consec_nr =[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'ConsecNonResp:')[0][1]) for i in range(len(trial_end))]
 
-print(onset_time[0][1])
+    #non_response= [(1 if consec_nr[i]>0 else 0) for i in range(len(trial_blocks))]
+
+    data = {'onset': onset_times,'duration': durations,'trial_type': trial_types, 'response_time':RTs, 'accuracy': accuracy, 'correct_response': correct_response, 'participant_response': participant_response}
+    data2 = pd.DataFrame(data)
+
+    #change it to proper BIDS naming
+    data2.to_csv((eprimefile[0:-4]+".tsv"), sep='\t', index=False)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
