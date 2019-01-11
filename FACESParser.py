@@ -2,23 +2,13 @@
 
 """FACES Task Parser
 
-Usage: FACESParser.py <eprime_filename>
+Usage: FACESParser.py <eprime_filename> <destination>
 
-This script will convert a null eprime file to a tsv file.
+This script will convert the eprime output text file for OPT-Neuro's FACES task into a tsv file formatted according to BIDS specification.
+
 It then outputs the trial number, onset time, accurracy, and reaction time values for each trial.
-Written by Ella Wiljer, 2018
-Edited by Gabi Herman, 21 Nov 2018
-
-
-Note to self from Gabi: It would be good to have options for everything in a folder or just for individuals. (Erin says not to.)
-
-
-
-For BIDs-ification
-Onset (in seconds) of the event measured from the beginning of the acquisition of the first volume in the corresponding task imaging data file.
-If any acquired scans have been discarded before forming the imaging data file, ensure that a time of 0 corresponds to the first image stored.
-In other words negative numbers in "onset" are allowed5.
-
+Originally written by Ella Wiljer, 2018
+BIDS-ified by Gabi Herman, 21 Nov 2018
 """
 from docopt import docopt
 import sys
@@ -26,6 +16,7 @@ import codecs
 import pdb
 import pandas as pd
 import numpy as np
+import re
 
 # function to read the eprime file
 def read_eprime(eprimefile):
@@ -53,15 +44,15 @@ def main():
 
     arguments       = docopt(__doc__)
     eprimefile      = arguments['<eprime_filename>']
+    destination     = arguments['<destination>']
 
-    #eprimefile = '/scratch/gherman/OPT/FACES/gabi_behav/used_textfiles/OPT01_UP1_10006_01_02_EMOTION.txt'  #the practise test case
+    text_file = eprimefile
 
+    mr_id = text_file[text_file.find('OPT01'):text_file.find('OPT01')+23]
 
-    eprime = read_eprime(eprimefile)
+    print(mr_id)
 
-    #create the tsv file from the eprime file
-    #with open (eprimefile[0:-4] + ".tsv", "w")as tsv:
-    #    tsv.write("Trial\ttrial_type\tonset\taccuracy\treaction time\n")
+    eprime = read_eprime(text_file)
 
     #tag the trials to obtain the data for each trial
     taglist = find_all_data(eprime,"Procedure: TrialsPROC\r\n") #that finds the trial numbers which actually have stimuli
@@ -108,7 +99,7 @@ def main():
     data2 = pd.DataFrame(data)
 
     #change it to proper BIDS naming
-    data2.to_csv((eprimefile[0:-4]+".tsv"), sep='\t', index=False)
+    data2.to_csv((destination+ mr_id+"_FACES"+".tsv"), sep='\t', index=False)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
