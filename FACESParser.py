@@ -33,8 +33,7 @@ def find_all_data (eprime, tag):
 
 def findnum(ln): #TODO: make this use pattern matching rather than just looking for lines
     try:
-        index = ln.find(":")
-        txtnum = ln[index + 2:-2]
+        txtnum = re.findall('(\d+)\r\n', ln)
         return int(txtnum)
     except:
         return "n/a"
@@ -49,8 +48,6 @@ def main():
     text_file = eprimefile
 
     mr_id = text_file[text_file.find('OPT01'):text_file.find('OPT01')+23]
-
-    print(mr_id)
 
     eprime = read_eprime(text_file)
 
