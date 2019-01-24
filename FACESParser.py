@@ -17,6 +17,7 @@ import pdb
 import pandas as pd
 import numpy as np
 import re
+import os
 
 # function to read the eprime file
 def read_eprime(eprimefile):
@@ -31,14 +32,13 @@ def find_all_data (eprime, tag):
     dataset = [(i,s) for i,s in enumerate(eprime) if tag in s]
     return dataset
 
-def findnum(ln): #TODO: make this use pattern matching rather than just looking for lines
+def findnum(ln):
     try:
         txtnum = re.findall('(\d+)\r\n', ln)
-        return int(txtnum)
+        return int(txtnum[0])
     except:
         return "n/a"
 
-#TODO: Separate this into more functions that make sense. :)
 def main():
 
     arguments       = docopt(__doc__)
@@ -47,9 +47,9 @@ def main():
 
     text_file = eprimefile
 
-    mr_id = text_file[text_file.find('OPT01'):text_file.find('OPT01')+23]
+    mr_id = eprimefile[eprimefile.find('OPT01'):eprimefile.find('OPT01')+23] #I assume there's a datman way to do this. ALso need a datman way to find the behav files in the code that calls this
 
-    eprime = read_eprime(text_file)
+    eprime = read_eprime(eprimefile)
 
     #tag the trials to obtain the data for each trial
     taglist = find_all_data(eprime,"Procedure: TrialsPROC\r\n") #that finds the trial numbers which actually have stimuli
@@ -78,25 +78,24 @@ def main():
     trial_blocks=[eprime[trial_start[i]:trial_end[i]] for i in range(len(trial_end))]
 
     onset_times=[((findnum(find_all_data(trial_blocks[i], 'StimSlide.OnsetTime:')[0][1])-basetime)/1000) for i in range(len(trial_end))]
+
     trial_types =[('Shapes' if 'Shape' in str(trial_blocks[i]) else 'Faces') for i in range(len(trial_blocks))]
+
     RTs=[(findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RT:')[0][1])/1000) for i in range(len(trial_end))]
 
-    durations=[2 for i in range(len(trial_end))]
+    durations=[int((findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.OnsetToOnsetTime')[0][1]))/1000) for i in range(len(trial_end))]
 
     accuracy=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.ACC:')[0][1]) for i in range(len(trial_end))]
 
     correct_response=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'CorrectResponse:')[0][1]) for i in range(len(trial_end))]
+
     participant_response = [findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RESP:')[0][1]) for i in range(len(trial_end))]
 
-    #consec_nr =[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'ConsecNonResp:')[0][1]) for i in range(len(trial_end))]
-
-    #non_response= [(1 if consec_nr[i]>0 else 0) for i in range(len(trial_blocks))]
-
-    data = {'onset': onset_times,'duration': durations,'trial_type': trial_types, 'response_time':RTs, 'accuracy': accuracy, 'correct_response': correct_response, 'participant_response': participant_response}
-    data2 = pd.DataFrame(data)
+    data_list = {'onset': onset_times,'duration': durations,'trial_type': trial_types, 'response_time':RTs, 'accuracy': accuracy, 'correct_response': correct_response, 'participant_response': participant_response}
+    data = pd.DataFrame(data_list)
 
     #change it to proper BIDS naming
-    data2.to_csv((destination+ mr_id+"_FACES"+".tsv"), sep='\t', index=False)
+    data.to_csv(os.path.join(destination,(mr_id+"_FACES.tsv")), sep='\t', index=False)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
