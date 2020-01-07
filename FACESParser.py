@@ -35,7 +35,7 @@ def find_all_data (eprime, tag):
 def findnum(ln):
     try:
         txtnum = re.findall('(\d+)\r\n', ln)
-        return int(txtnum[0])
+        return float(txtnum[0])
     except:
         return "n/a"
 
@@ -46,9 +46,12 @@ def main():
     destination     = arguments['<destination>']
 
     text_file = eprimefile
+    print(text_file) #temporary for debugging
 
     mr_id = eprimefile[eprimefile.find('OPT01'):eprimefile.find('OPT01')+23] #I assume there's a datman way to do this. ALso need a datman way to find the behav files in the code that calls this
 
+
+    # it gives list index out of range errors for invalid files - i should probably build in checks for that and then make a task file "blacklist" type thing
     eprime = read_eprime(eprimefile)
 
     #tag the trials to obtain the data for each trial
@@ -83,13 +86,13 @@ def main():
 
     RTs=[(findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RT:')[0][1])/1000) for i in range(len(trial_end))]
 
-    durations=[int((findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.OnsetToOnsetTime')[0][1]))/1000) for i in range(len(trial_end))]
+    durations=[((findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.OnsetToOnsetTime')[0][1]))/1000) for i in range(len(trial_end))]
 
-    accuracy=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.ACC:')[0][1]) for i in range(len(trial_end))]
+    accuracy=[int(findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.ACC:')[0][1])) for i in range(len(trial_end))]
 
-    correct_response=[findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'CorrectResponse:')[0][1]) for i in range(len(trial_end))]
+    correct_response=[int(findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'CorrectResponse:')[0][1])) for i in range(len(trial_end))]
 
-    participant_response = [findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RESP:')[0][1]) for i in range(len(trial_end))]
+    participant_response = [findnum(find_all_data(eprime[trial_start[i]:trial_end[i]], 'StimSlide.RESP:')[0][1]) for i in range(len(trial_end))] #the problem w making this an integer is that it cant work on the n/as :(
 
     data_list = {'onset': onset_times,'duration': durations,'trial_type': trial_types, 'response_time':RTs, 'accuracy': accuracy, 'correct_response': correct_response, 'participant_response': participant_response}
     data = pd.DataFrame(data_list)

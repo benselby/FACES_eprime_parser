@@ -1,0 +1,14 @@
+accuracy	correct_response	duration	onset	participant_response	response_time	trial_type
+0	2	2.133	11.0	n/a	0.0	Shapes
+0	3	2.117	14.033	n/a	0.0	Shapes
+0	2	2.117	17.083	n/a	0.0	Shapes
+1	3	2.117	20.116	3.0	1.08	Shapes
+1	3	2.116	23.133	3.0	1.414	Shapes
+0	2	2.116	26.166	3.0	1.837	Shapes
+1	2	2.116	32.216	2.0	1.245	Faces
+1	2	2.116	35.299	2.0	1.043	Faces
+1	3	2.116	38.349	3.0	1.68	Faces
+1	3	2.117	41.398	3.0	1.575	Faces
+1	3	2.117	44.448	3.0	1.15	Faces
+1	3	2.116	47.482	3.0	1.212	Shapes
+0	3	0.0	53.498	n/a	0.0	Shapes
