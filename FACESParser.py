@@ -97,8 +97,26 @@ def main():
     data_list = {'onset': onset_times,'duration': durations,'trial_type': trial_types, 'response_time':RTs, 'accuracy': accuracy, 'correct_response': correct_response, 'participant_response': participant_response}
     data = pd.DataFrame(data_list)
 
+
+    log_head, log_tail =os.path.split(eprimefile)
+
+    find=re.compile('FACES_eprime_parser\/(OPT01[^\/]*)')
+    m = find.findall(log_head)
+    find2=re.compile('(part\d).log')
+    n = find2.findall(log_tail)
+    if m:
+        sub_id=m[0]
+    else:
+        sub_id="NULL"
+
+    file_name='/projects/gherman/FACES_eprime_parser/out/{}/{}_FACES.tsv'.format(sub_id, sub_id)
+
+    if not os.path.exists(os.path.dirname(file_name)):
+        os.makedirs(os.path.dirname(file_name))
+
+
     #change it to proper BIDS naming
-    data.to_csv(os.path.join(destination,(mr_id+"_FACES.tsv")), sep='\t', index=False)
+    data.to_csv(file_name, sep='\t', index=False)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
